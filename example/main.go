@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/ddx2x/crossgate-go/register"
 	"github.com/ddx2x/crossgate-go/service"
@@ -11,10 +14,12 @@ import (
 
 var _ service.IService = &Service{}
 
-type Service struct{}
+type Service struct {
+	Flag string
+}
 
-func (Service) Name() string {
-	return "test"
+func (s Service) Name() string {
+	return s.Flag
 }
 
 func (Service) Addr() string {
@@ -37,16 +42,23 @@ func (Service) Lba() string {
 }
 
 func (Service) Start(ctx context.Context) error {
-	for range ctx.Done() {
-	}
+	<-ctx.Done()
 	return nil
 }
 
 func main() {
 
-	s := Service{}
+	ctx, cancel := context.WithCancel(context.Background())
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM,
+		syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
 
-	if err := service.MakeService(s); err != nil {
+	go func() {
+		<-c
+		cancel()
+	}()
+
+	if err := service.MakeService(ctx, []service.IService{Service{Flag: "test1"}, Service{"test2"}}); err != nil {
 		panic(err)
 	}
 
