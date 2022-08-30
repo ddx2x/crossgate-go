@@ -16,7 +16,7 @@ type IService interface {
 	Start(ctx context.Context) error
 }
 
-func MakeService(ctx context.Context, ss []IService) error {
+func MakeService(ctx context.Context, ss ...IService) error {
 	init_env()
 	
 	wg := &sync.WaitGroup{}
