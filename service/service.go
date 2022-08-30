@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/ddx2x/crossgate-go/plugin"
@@ -18,16 +19,21 @@ type IService interface {
 
 func MakeService(ctx context.Context, ss ...IService) error {
 	init_env()
-	
+
 	wg := &sync.WaitGroup{}
 	ec := make(chan error)
+	service_names := make([]string, 0)
 	for _, s := range ss {
-		p, err := plugin.Get(ctx, wg, plugin.MongoDBPlugin, get_register_addr())
-		if err != nil {
-			return err
-		}
-		if err := register.Register(ctx, p, s.Name(), s.Lba(), s.Addr()); err != nil {
-			return err
+		service_names = append(service_names, strings.Split(s.Name(), ",")...)
+
+		for _, n := range service_names {
+			p, err := plugin.Get(ctx, wg, plugin.MongoDBPlugin, get_register_addr())
+			if err != nil {
+				return err
+			}
+			if err := register.Register(ctx, p, n, s.Lba(), s.Addr()); err != nil {
+				return err
+			}
 		}
 		go func(s IService) {
 			ec <- s.Start(ctx)

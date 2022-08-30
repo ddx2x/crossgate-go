@@ -58,7 +58,7 @@ func main() {
 		cancel()
 	}()
 
-	if err := service.MakeService(ctx, Service{Flag: "test1"}, Service{"test2"}); err != nil {
+	if err := service.MakeService(ctx, Service{Flag: "test1,test1.1"}, Service{"test2"}); err != nil {
 		panic(err)
 	}
 
