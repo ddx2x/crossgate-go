@@ -34,30 +34,29 @@ type Mongo struct {
 }
 
 func initMongoPlugin(ctx context.Context, wg *sync.WaitGroup, uri string) (Plugin, error) {
-	context := context.TODO()
-
-	client, err := connect(context, uri)
+	client, err := connect(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
 	mongo := &Mongo{MongoContent: nil, client: client}
 
 	wg.Add(1)
+
 	go func() {
-		defer wg.Done()
-		tick := time.NewTicker(2 * time.Second)
+		defer func() {
+			mongo.unregister()
+			wg.Done()
+		}()
+
 		for {
 			select {
 			case <-ctx.Done():
-				if err := mongo.unregister(context); err != nil {
-					// ignore
-				}
 				return
-			case <-tick.C:
+			case <-time.After(time.Second * 2):
 				if mongo.MongoContent == nil {
 					continue
 				}
-				if err := mongo.Set(context, "", *mongo.Content); err != nil {
+				if err := mongo.Set(ctx, "", *mongo.Content); err != nil {
 					fmt.Printf("renewal error %s", err)
 				}
 			}
@@ -67,13 +66,18 @@ func initMongoPlugin(ctx context.Context, wg *sync.WaitGroup, uri string) (Plugi
 	return mongo, nil
 }
 
-func (m *Mongo) unregister(ctx context.Context) error {
+func (m *Mongo) unregister() error {
+	if m.MongoContent == nil {
+		return nil
+	}
+
 	id, _ := primitive.ObjectIDFromHex(m.MongoContent.Id)
-	filter := bson.M{"_id": id}
+
 	_, err := m.client.
 		Database(schemaName).
 		Collection(collectionName).
-		DeleteOne(ctx, filter)
+		DeleteOne(context.Background(), bson.M{"_id": id})
+
 	return err
 }
 
@@ -98,6 +102,8 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 		}
 	}
 
+	m.MongoContent = &mc
+
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
 			{Key: "content.service", Value: value.Service},
@@ -119,17 +125,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 		return err
 	}
 
-	m.MongoContent = &mc
-
 	return nil
-}
-
-func getCtx(client *mongo.Client) (context.Context, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	if err := client.Connect(ctx); err != nil {
-		return nil, cancel, err
-	}
-	return ctx, cancel, nil
 }
 
 func connect(ctx context.Context, uri string) (*mongo.Client, error) {
@@ -145,18 +141,21 @@ func connect(ctx context.Context, uri string) (*mongo.Client, error) {
 				reflect.TypeOf(time.Time{})).
 			Build(),
 	)
+
 	cliOpt.ApplyURI(uri)
-	mcli, err := mongo.NewClient(cliOpt)
+
+	cli, err := mongo.NewClient(cliOpt)
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel, err := getCtx(mcli)
-	defer cancel()
-	if err != nil {
+
+	if err := cli.Connect(ctx); err != nil {
 		return nil, err
 	}
-	if err := mcli.Ping(ctx, nil); err != nil {
+
+	if err := cli.Ping(ctx, nil); err != nil {
 		return nil, err
 	}
-	return mcli, nil
+
+	return cli, nil
 }

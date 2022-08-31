@@ -22,11 +22,8 @@ func MakeService(ctx context.Context, ss ...IService) error {
 
 	wg := &sync.WaitGroup{}
 	ec := make(chan error)
-	service_names := make([]string, 0)
 	for _, s := range ss {
-		service_names = append(service_names, strings.Split(s.Name(), ",")...)
-
-		for _, n := range service_names {
+		for _, n := range strings.Split(s.Name(), ",") {
 			p, err := plugin.Get(ctx, wg, plugin.MongoDBPlugin, get_register_addr())
 			if err != nil {
 				return err
@@ -35,10 +32,11 @@ func MakeService(ctx context.Context, ss ...IService) error {
 				return err
 			}
 		}
-		go func(s IService) {
+		go func(s IService, ec chan error) {
 			ec <- s.Start(ctx)
-		}(s)
+		}(s, ec)
 	}
+
 	wg.Wait()
 
 	return <-ec
