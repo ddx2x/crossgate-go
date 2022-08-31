@@ -38,10 +38,20 @@ func initMongoPlugin(ctx context.Context, wg *sync.WaitGroup, uri string) (Plugi
 	if err != nil {
 		return nil, err
 	}
+	_, err = client.Database(schemaName).
+		Collection(collectionName).
+		Indexes().
+		CreateOne(ctx, mongo.IndexModel{
+			Keys:    bson.M{"time": 1},
+			Options: options.Index().SetExpireAfterSeconds(2),
+		}, &options.CreateIndexesOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	mongo := &Mongo{MongoContent: nil, client: client}
 
 	wg.Add(1)
-
 	go func() {
 		defer func() {
 			mongo.unregister()
