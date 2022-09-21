@@ -22,7 +22,9 @@ const (
 
 type MongoContent struct {
 	Id      string    `json:"_id" bson:"_id"`
-	Content *Content  `json:"content" bson:"content"`
+	Service string    `json:"service" bson:"service"`
+	Lba     string    `json:"lba" bson:"lba"`
+	Addr    string    `json:"addr" bson:"addr"`
 	Time    time.Time `json:"time" bson:"time"`
 }
 
@@ -66,7 +68,12 @@ func initMongoPlugin(ctx context.Context, wg *sync.WaitGroup, uri string) (Plugi
 				if mongo.MongoContent == nil {
 					continue
 				}
-				if err := mongo.Set(ctx, "", *mongo.Content); err != nil {
+				c := Content{
+					Service: mongo.Service,
+					Addr:    mongo.Addr,
+					Lba:     mongo.Lba,
+				}
+				if err := mongo.Set(ctx, "", c); err != nil {
 					fmt.Printf("renewal error %s", err)
 				}
 			}
@@ -105,7 +112,9 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 
 	if res.Err() == mongo.ErrNoDocuments {
 		mc.Id = primitive.NewObjectID().String()
-		mc.Content = &value
+		mc.Service = value.Service
+		mc.Lba = value.Lba
+		mc.Addr = value.Addr
 	} else {
 		if err := res.Decode(&mc); err != nil {
 			return err
