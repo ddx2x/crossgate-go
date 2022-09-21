@@ -88,12 +88,10 @@ func (m *Mongo) unregister() error {
 		return nil
 	}
 
-	id, _ := primitive.ObjectIDFromHex(m.MongoContent.Id)
-
 	_, err := m.client.
 		Database(schemaName).
 		Collection(collectionName).
-		DeleteOne(context.Background(), bson.M{"_id": id})
+		DeleteOne(context.Background(), bson.M{"_id": m.MongoContent.Id})
 
 	return err
 }
@@ -111,7 +109,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 		Collection(collectionName).FindOne(ctx, filter)
 
 	if res.Err() == mongo.ErrNoDocuments {
-		mc.Id = primitive.NewObjectID().String()
+		mc.Id = primitive.NewObjectID().Hex()
 		mc.Service = value.Service
 		mc.Lba = value.Lba
 		mc.Addr = value.Addr
@@ -125,6 +123,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
+			{Key: "_id", Value: mc.Id},
 			{Key: "service", Value: value.Service},
 			{Key: "lba", Value: value.Lba},
 			{Key: "addr", Value: value.Addr},
