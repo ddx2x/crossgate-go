@@ -96,8 +96,8 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 
 	upsert := true
 	filter := bson.D{
-		{Key: "content.service", Value: value.Service},
-		{Key: "content.addr", Value: value.Addr},
+		{Key: "service", Value: value.Service},
+		{Key: "addr", Value: value.Addr},
 	}
 
 	res := m.client.Database(schemaName).
@@ -116,9 +116,9 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 
 	update := bson.D{
 		{Key: "$set", Value: bson.D{
-			{Key: "content.service", Value: value.Service},
-			{Key: "content.lba", Value: value.Lba},
-			{Key: "content.addr", Value: value.Addr},
+			{Key: "service", Value: value.Service},
+			{Key: "lba", Value: value.Lba},
+			{Key: "addr", Value: value.Addr},
 			{Key: "time", Value: time.Now()},
 		}}}
 	_, err := m.client.
