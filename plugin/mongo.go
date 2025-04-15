@@ -26,6 +26,7 @@ type MongoContent struct {
 	Lba     string    `json:"lba" bson:"lba"`
 	Addr    string    `json:"addr" bson:"addr"`
 	Time    time.Time `json:"time" bson:"time"`
+	Type    uint8     `json:"type" bson:"type"`
 }
 
 var _ Plugin = &Mongo{}
@@ -113,6 +114,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 		mc.Service = value.Service
 		mc.Lba = value.Lba
 		mc.Addr = value.Addr
+		mc.Type = 1
 	} else {
 		if err := res.Decode(&mc); err != nil {
 			return err
@@ -128,6 +130,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 			{Key: "lba", Value: value.Lba},
 			{Key: "addr", Value: value.Addr},
 			{Key: "time", Value: time.Now()},
+			{Key: "type", Value: 1},
 		}}}
 	_, err := m.client.
 		Database(schemaName).
