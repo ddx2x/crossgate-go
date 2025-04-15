@@ -21,6 +21,7 @@ func Register(ctx context.Context, p plugin.Plugin, name string, lba LoadBalance
 		Service: name,
 		Lba:     lba,
 		Addr:    addr,
+		Type:    1,
 	}
 	if err := p.Set(ctx, name, content); err != nil {
 		return err

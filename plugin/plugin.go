@@ -15,6 +15,7 @@ type Content struct {
 	Service string `json:"service" bson:"service"`
 	Lba     string `json:"lba" bson:"lba"`
 	Addr    string `json:"addr" bson:"addr"`
+	Type    uint8  `json:"type" bson:"type"`
 }
 
 type Plugin interface {
