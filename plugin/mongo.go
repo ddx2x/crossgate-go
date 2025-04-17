@@ -73,6 +73,7 @@ func initMongoPlugin(ctx context.Context, wg *sync.WaitGroup, uri string) (Plugi
 					Service: mongo.Service,
 					Addr:    mongo.Addr,
 					Lba:     mongo.Lba,
+					Type:    mongo.Type,
 				}
 				if err := mongo.Set(ctx, "", c); err != nil {
 					fmt.Printf("renewal error %s", err)
@@ -98,7 +99,13 @@ func (m *Mongo) unregister() error {
 }
 
 func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
-	mc := MongoContent{}
+	mc := MongoContent{
+		Id:      primitive.NewObjectID().Hex(),
+		Service: value.Service,
+		Addr:    value.Addr,
+		Lba:     value.Lba,
+		Type:    value.Type,
+	}
 
 	upsert := true
 	filter := bson.D{
@@ -110,28 +117,29 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 		Collection(collectionName).FindOne(ctx, filter)
 
 	if res.Err() == mongo.ErrNoDocuments {
-		mc.Id = primitive.NewObjectID().Hex()
-		mc.Service = value.Service
-		mc.Lba = value.Lba
-		mc.Addr = value.Addr
-		mc.Type = 1
+		mc.Time = time.Now()
 	} else {
-		if err := res.Decode(&mc); err != nil {
+		var existingDoc MongoContent
+		if err := res.Decode(&existingDoc); err != nil {
 			return err
 		}
+		existingDoc.Type = value.Type
+		mc = existingDoc
 	}
 
 	m.MongoContent = &mc
+	// 修改更新语句
+	update := bson.M{
+		"$set": bson.M{
+			"_id":     mc.Id,
+			"service": value.Service,
+			"lba":     value.Lba,
+			"addr":    value.Addr,
+			"time":    time.Now(),
+			"type":    value.Type,
+		},
+	}
 
-	update := bson.D{
-		{Key: "$set", Value: bson.D{
-			{Key: "_id", Value: mc.Id},
-			{Key: "service", Value: value.Service},
-			{Key: "lba", Value: value.Lba},
-			{Key: "addr", Value: value.Addr},
-			{Key: "time", Value: time.Now()},
-			{Key: "type", Value: 1},
-		}}}
 	_, err := m.client.
 		Database(schemaName).
 		Collection(collectionName).
@@ -147,6 +155,7 @@ func (m *Mongo) Set(ctx context.Context, name string, value Content) error {
 	}
 
 	return nil
+
 }
 
 func connect(ctx context.Context, uri string) (*mongo.Client, error) {

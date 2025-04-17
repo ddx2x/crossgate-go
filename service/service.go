@@ -13,6 +13,7 @@ type IService interface {
 	Name() string
 	Addr() string
 	Lba() string
+	Type() uint8
 
 	Start(ctx context.Context) error
 }
@@ -28,7 +29,7 @@ func MakeService(ctx context.Context, ss ...IService) error {
 			if err != nil {
 				return err
 			}
-			if err := register.Register(ctx, p, n, s.Lba(), s.Addr()); err != nil {
+			if err := register.Register(ctx, p, n, s.Lba(), s.Addr(), 1); err != nil {
 				return err
 			}
 		}

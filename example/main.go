@@ -41,6 +41,10 @@ func (Service) Lba() string {
 	return register.Default_LoadBalancer_Algorithm
 }
 
+func (Service) Type() uint8 {
+	return 1
+}
+
 func (Service) Start(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
@@ -57,6 +61,8 @@ func main() {
 		<-c
 		cancel()
 	}()
+
+	os.Setenv("REGISTER_ADDR", "mongodb://10.200.100.200:27017")
 
 	if err := service.MakeService(ctx, Service{Flag: "test1,test1.1"}, Service{"test2"}); err != nil {
 		panic(err)
